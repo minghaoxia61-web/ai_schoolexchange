@@ -1,6 +1,6 @@
 {
     "name" : "Campus_trade",
-    "appid" : "__UNI__1F19BBB",
+    "appid" : "__UNI__1A5488F",
     "description" : "",
     "versionName" : "1.0.0",
     "versionCode" : "100",
@@ -68,5 +68,12 @@
     "uniStatistics" : {
         "enable" : false
     },
-    "vueVersion" : "3"
+    "vueVersion" : "3",
+    "fallbackLocale" : "zh-Hans",
+    "uniCloud" : {
+        "service" : {
+            "provider" : "aliyun",
+            "spaceId" : "mp-d52d6df0-b08a-4baa-8d4a-88270ae48c11"
+        }
+    }
 }

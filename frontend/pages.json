@@ -18,6 +18,12 @@
 				"navigationBarTitleText": "登录",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/test/test",
+			"style": {
+				"navigationBarTitleText": "云函数测试"
+			}
 		}
 	],
 	"globalStyle": {
