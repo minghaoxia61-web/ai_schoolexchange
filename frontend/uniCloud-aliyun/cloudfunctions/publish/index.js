@@ -1,6 +1,5 @@
 // 发布物品云函数
 const db = uniCloud.database()
-const { v4: uuidv4 } = require('uuid')
 
 /**
  * 生成唯一的 postId

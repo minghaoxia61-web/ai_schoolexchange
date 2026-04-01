@@ -1,11 +1,9 @@
 {
-  "name": "publish",
+  "name": "respond",
   "version": "1.0.0",
-  "description": "发布物品云函数",
+  "description": "处理用户对匹配方案响应的云函数",
   "main": "index.js",
-  "dependencies": {
-    "uuid": "^9.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

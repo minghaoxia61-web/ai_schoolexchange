@@ -80,6 +80,21 @@
 				<text class="empty-text">暂无数据</text>
 			</view>
 		</scroll-view>
+
+		<!-- 云函数测试区域 -->
+		<view class="test-section">
+			<text class="test-title">云函数测试</text>
+			<view class="test-buttons">
+				<button class="test-btn" @click="testPublish">测试发布物品</button>
+				<button class="test-btn" @click="testPosts">测试获取物品列表</button>
+				<button class="test-btn" @click="testMatch">测试匹配算法</button>
+				<button class="test-btn" @click="testRespond">测试匹配响应</button>
+			</view>
+			<view class="test-result" v-if="result">
+				<text class="result-title">测试结果：</text>
+				<text class="result-content">{{ result }}</text>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -90,6 +105,7 @@ const searchKeyword = ref('')
 const currentTab = ref('all')
 const isLoading = ref(false)
 const hasMore = ref(true)
+const result = ref('')
 
 const itemList = ref([
 	{
@@ -208,6 +224,74 @@ const loadMore = () => {
 		isLoading.value = false
 		hasMore.value = false
 	}, 1000)
+}
+
+// 测试云函数
+const testPublish = async () => {
+	try {
+		const res = await uniCloud.callFunction({
+			name: 'publish',
+			data: {
+				userId: 'U001',
+				type: 'item',
+				title: '测试物品',
+				description: '测试描述',
+				tradeMethod: 'money',
+				price: '100',
+				contact: '13800138000'
+			}
+		})
+		result.value = JSON.stringify(res.result, null, 2)
+	} catch (error) {
+		result.value = '测试失败: ' + error.message
+	}
+}
+
+const testPosts = async () => {
+	try {
+		const res = await uniCloud.callFunction({
+			name: 'posts',
+			data: {
+				page: 1,
+				pageSize: 10,
+				type: 'all',
+				keyword: ''
+			}
+		})
+		result.value = JSON.stringify(res.result, null, 2)
+	} catch (error) {
+		result.value = '测试失败: ' + error.message
+	}
+}
+
+const testMatch = async () => {
+	try {
+		const res = await uniCloud.callFunction({
+			name: 'match',
+			data: {
+				userId: 'U001'
+			}
+		})
+		result.value = JSON.stringify(res.result, null, 2)
+	} catch (error) {
+		result.value = '测试失败: ' + error.message
+	}
+}
+
+const testRespond = async () => {
+	try {
+		const res = await uniCloud.callFunction({
+			name: 'respond',
+			data: {
+				userId: 'U001',
+				matchId: 'match_1711939200000_abc123',
+				action: 'accept'
+			}
+		})
+		result.value = JSON.stringify(res.result, null, 2)
+	} catch (error) {
+		result.value = '测试失败: ' + error.message
+	}
 }
 </script>
 
@@ -405,5 +489,58 @@ const loadMore = () => {
 .empty {
 	flex-direction: column;
 	gap: 20rpx;
+}
+
+/* 云函数测试区域样式 */
+.test-section {
+	background: #ffffff;
+	margin: 20rpx 30rpx;
+	padding: 30rpx;
+	border-radius: 15rpx;
+	box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+}
+
+.test-title {
+	font-size: 32rpx;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 20rpx;
+	display: block;
+}
+
+.test-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 15rpx;
+	margin-bottom: 20rpx;
+}
+
+.test-btn {
+	width: 100%;
+	height: 80rpx;
+	font-size: 28rpx;
+	border-radius: 10rpx;
+}
+
+.test-result {
+	background: #f5f5f5;
+	padding: 20rpx;
+	border-radius: 10rpx;
+	margin-top: 20rpx;
+}
+
+.result-title {
+	font-size: 28rpx;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 10rpx;
+	display: block;
+}
+
+.result-content {
+	font-size: 24rpx;
+	color: #666;
+	white-space: pre-wrap;
+	line-height: 1.5;
 }
 </style>
