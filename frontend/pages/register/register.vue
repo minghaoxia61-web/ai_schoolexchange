@@ -1,12 +1,23 @@
 <template>
-	<view class="login-container">
-		<view class="login-box">
+	<view class="register-container">
+		<view class="register-box">
 			<view class="logo-section">
 				<image class="logo" src="/static/logo.png"></image>
-				<text class="app-name">校园交易</text>
+				<text class="app-name">注册账号</text>
 			</view>
 			
 			<view class="form-section">
+				<view class="input-group">
+					<text class="icon">👤</text>
+					<input 
+						class="input" 
+						type="text" 
+						v-model="userName" 
+						placeholder="请输入用户名"
+						maxlength="20"
+					/>
+				</view>
+				
 				<view class="input-group">
 					<text class="icon">📱</text>
 					<input 
@@ -24,28 +35,33 @@
 						class="input" 
 						:type="showPassword ? 'text' : 'password'" 
 						v-model="password" 
-						placeholder="请输入密码"
+						placeholder="请输入密码（至少6位）"
 					/>
 					<text class="toggle-password" @click="togglePassword">
 						{{ showPassword ? '👁️' : '👁️‍🗨️' }}
 					</text>
 				</view>
 				
-				<view class="options">
-					<view class="remember-me" @click="toggleRemember">
-						<text class="checkbox">{{ rememberMe ? '☑️' : '⬜' }}</text>
-						<text class="label">记住密码</text>
-					</view>
-					<text class="forget-password" @click="forgetPassword">忘记密码?</text>
+				<view class="input-group">
+					<text class="icon">🔒</text>
+					<input 
+						class="input" 
+						:type="showConfirmPassword ? 'text' : 'password'" 
+						v-model="confirmPassword" 
+						placeholder="请再次输入密码"
+					/>
+					<text class="toggle-password" @click="toggleConfirmPassword">
+						{{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+					</text>
 				</view>
 				
-				<button class="login-btn" @click="handleLogin" :disabled="isLoading">
-					{{ isLoading ? '登录中...' : '登录' }}
+				<button class="register-btn" @click="handleRegister" :disabled="isLoading">
+					{{ isLoading ? '注册中...' : '注册' }}
 				</button>
 				
-				<view class="register-link">
-					<text class="text">还没有账号?</text>
-					<text class="link" @click="goToRegister">立即注册</text>
+				<view class="login-link">
+					<text class="text">已有账号?</text>
+					<text class="link" @click="goToLogin">立即登录</text>
 				</view>
 			</view>
 		</view>
@@ -56,133 +72,104 @@
 export default {
 	data() {
 		return {
+			userName: '',
 			phone: '',
 			password: '',
+			confirmPassword: '',
 			showPassword: false,
-			rememberMe: false,
+			showConfirmPassword: false,
 			isLoading: false
 		}
 	},
-	onLoad() {
-		this.loadSavedCredentials()
-	},
 	methods: {
-		// 切换密码显示状态
 		togglePassword() {
 			this.showPassword = !this.showPassword
 		},
 		
-		// 切换记住密码状态
-		toggleRemember() {
-			this.rememberMe = !this.rememberMe
+		toggleConfirmPassword() {
+			this.showConfirmPassword = !this.showConfirmPassword
 		},
 		
-		// 处理登录
-		async handleLogin() {
-			// 验证表单
+		async handleRegister() {
 			if (!this.validateForm()) {
 				return
 			}
 			
-			// 如果正在登录，直接返回
 			if (this.isLoading) {
 				return
 			}
 			
 			try {
-				// 设置登录状态
 				this.isLoading = true
 				
-				// 显示加载提示
 				uni.showLoading({
-					title: '登录中...',
+					title: '注册中...',
 					mask: true
 				})
 				
-				// 调用云函数进行登录
 				const res = await uniCloud.callFunction({
 					name: 'uni-id-cf',
 					data: {
-						action: 'login',
+						action: 'register',
 						params: {
-							username: this.phone,
+							username: this.userName,
+							phone: this.phone,
 							password: this.password
 						}
 					}
 				})
 				
-				// 隐藏加载提示
 				uni.hideLoading()
 				
-				// 处理返回结果
 				if (res.result.code === 0) {
-					// 登录成功，保存用户信息到本地存储
-					
-					// 保存 userId
-					if (res.result.uid) {
-						uni.setStorageSync('userId', res.result.uid)
-					}
-					
-					// 保存完整的用户信息
-					const userInfo = {
-						uid: res.result.uid,
-						username: res.result.username || this.phone,
-						phone: this.phone,
-						token: res.result.token,
-						// 保存其他返回的用户信息
-						...res.result.userInfo
-					}
-					uni.setStorageSync('userInfo', userInfo)
-					
-					// 显示登录成功提示
 					uni.showToast({
-						title: '登录成功',
+						title: '注册成功',
 						icon: 'success',
 						duration: 1500
 					})
 					
-					// 处理记住密码
-					if (this.rememberMe) {
-						this.saveCredentials()
-					} else {
-						this.clearCredentials()
-					}
-					
-					// 1.5秒后跳转到首页
 					setTimeout(() => {
-						uni.switchTab({
-							url: '/pages/index/index'
-						})
+						uni.navigateBack()
 					}, 1500)
 				} else {
-					// 登录失败，显示错误信息
 					uni.showToast({
-						title: res.result.msg || '登录失败',
+						title: res.result.msg || '注册失败',
 						icon: 'none',
 						duration: 2000
 					})
 				}
 			} catch (error) {
-				// 隐藏加载提示
 				uni.hideLoading()
 				
-				console.error('登录失败:', error)
+				console.error('注册失败:', error)
 				
-				// 显示网络错误提示
 				uni.showToast({
 					title: '网络错误，请稍后重试',
 					icon: 'none',
 					duration: 2000
 				})
 			} finally {
-				// 取消登录状态
 				this.isLoading = false
 			}
 		},
 		
-		// 验证表单
 		validateForm() {
-			// 验证手机号是否为空
+			if (!this.userName || this.userName.trim() === '') {
+				uni.showToast({
+					title: '请输入用户名',
+					icon: 'none'
+				})
+				return false
+			}
+			
+			if (this.userName.length < 2) {
+				uni.showToast({
+					title: '用户名至少2个字符',
+					icon: 'none'
+				})
+				return false
+			}
+			
 			if (!this.phone || this.phone.trim() === '') {
 				uni.showToast({
 					title: '请输入手机号',
@@ -191,7 +178,6 @@ export default {
 				return false
 			}
 			
-			// 验证手机号格式
 			if (!/^1[3-9]\d{9}$/.test(this.phone)) {
 				uni.showToast({
 					title: '手机号格式不正确',
@@ -200,7 +186,6 @@ export default {
 				return false
 			}
 			
-			// 验证密码是否为空
 			if (!this.password || this.password.trim() === '') {
 				uni.showToast({
 					title: '请输入密码',
@@ -209,7 +194,6 @@ export default {
 				return false
 			}
 			
-			// 验证密码长度
 			if (this.password.length < 6) {
 				uni.showToast({
 					title: '密码长度不能少于6位',
@@ -218,53 +202,34 @@ export default {
 				return false
 			}
 			
+			if (!this.confirmPassword || this.confirmPassword.trim() === '') {
+				uni.showToast({
+					title: '请确认密码',
+					icon: 'none'
+				})
+				return false
+			}
+			
+			if (this.password !== this.confirmPassword) {
+				uni.showToast({
+					title: '两次密码不一致',
+					icon: 'none'
+				})
+				return false
+			}
+			
 			return true
 		},
 		
-		// 保存登录凭据
-		saveCredentials() {
-			uni.setStorageSync('savedPhone', this.phone)
-			uni.setStorageSync('savedPassword', this.password)
-			uni.setStorageSync('rememberMe', true)
-		},
-		
-		// 加载保存的登录凭据
-		loadSavedCredentials() {
-			const rememberMe = uni.getStorageSync('rememberMe')
-			if (rememberMe) {
-				this.phone = uni.getStorageSync('savedPhone') || ''
-				this.password = uni.getStorageSync('savedPassword') || ''
-				this.rememberMe = true
-			}
-		},
-		
-		// 清除登录凭据
-		clearCredentials() {
-			uni.removeStorageSync('savedPhone')
-			uni.removeStorageSync('savedPassword')
-			uni.setStorageSync('rememberMe', false)
-		},
-		
-		// 忘记密码
-		forgetPassword() {
-			uni.showToast({
-				title: '功能开发中',
-				icon: 'none'
-			})
-		},
-		
-		// 跳转到注册页面
-		goToRegister() {
-			uni.navigateTo({
-				url: '/pages/register/register'
-			})
+		goToLogin() {
+			uni.navigateBack()
 		}
 	}
 }
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
 	min-height: 100vh;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	padding: 100rpx 60rpx;
@@ -273,7 +238,7 @@ export default {
 	justify-content: center;
 }
 
-.login-box {
+.register-box {
 	width: 100%;
 	background: #ffffff;
 	border-radius: 30rpx;
@@ -330,34 +295,7 @@ export default {
 	padding: 10rpx;
 }
 
-.options {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 50rpx;
-}
-
-.remember-me {
-	display: flex;
-	align-items: center;
-}
-
-.checkbox {
-	font-size: 32rpx;
-	margin-right: 10rpx;
-}
-
-.label {
-	font-size: 28rpx;
-	color: #666;
-}
-
-.forget-password {
-	font-size: 28rpx;
-	color: #667eea;
-}
-
-.login-btn {
+.register-btn {
 	width: 100%;
 	height: 90rpx;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -370,13 +308,14 @@ export default {
 	justify-content: center;
 	margin-bottom: 40rpx;
 	border: none;
+	margin-top: 50rpx;
 }
 
-.login-btn[disabled] {
+.register-btn[disabled] {
 	opacity: 0.6;
 }
 
-.register-link {
+.login-link {
 	display: flex;
 	justify-content: center;
 	align-items: center;

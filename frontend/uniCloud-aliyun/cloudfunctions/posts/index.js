@@ -52,12 +52,21 @@ exports.main = async (event, context) => {
       .limit(pageSizeNum)
       .get()
 
-    // 处理数据，关联用户表获取 userName
+    // 处理数据，尝试关联用户表获取 userName
     const postList = []
     for (const post of posts.data) {
-      // 查询用户信息
-      const userResult = await db.collection('users').where({ userId: post.userId }).get()
-      const userName = userResult.data.length > 0 ? userResult.data[0].userName : ''
+      let userName = '匿名用户'
+      
+      try {
+        // 尝试查询用户信息
+        const userResult = await db.collection('users').where({ userId: post.userId }).get()
+        if (userResult.data.length > 0 && userResult.data[0].userName) {
+          userName = userResult.data[0].userName
+        }
+      } catch (error) {
+        // 如果查询用户失败，使用默认值
+        console.log('查询用户信息失败:', error)
+      }
 
       // 构建返回数据
       postList.push({
@@ -91,7 +100,7 @@ exports.main = async (event, context) => {
     console.error('获取物品列表失败:', error)
     return {
       code: 500,
-      message: '数据库错误'
+      message: '数据库错误: ' + error.message
     }
   }
 }
