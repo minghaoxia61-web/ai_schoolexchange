@@ -184,7 +184,9 @@
 				/>
 			</view>
 
-			<button class="submit-btn" @click="handleSubmit">发布</button>
+			<button class="submit-btn" @click="handleSubmit" :disabled="isSubmitting">
+				{{ isSubmitting ? '发布中...' : '发布' }}
+			</button>
 		</view>
 	</view>
 </template>
@@ -192,6 +194,7 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
 
+// 表单数据
 const formData = reactive({
 	type: 'item',
 	title: '',
@@ -203,9 +206,15 @@ const formData = reactive({
 	contact: ''
 })
 
+// 是否正在提交
+const isSubmitting = ref(false)
+
+// 是否显示提示
 const showHint = ref(false)
+// 是否显示历史列表
 const showHistoryList = ref(false)
 
+// 历史发布记录
 const historyItems = ref([
 	{
 		id: 1,
@@ -224,29 +233,35 @@ const historyItems = ref([
 	}
 ])
 
+// 是否有历史记录
 const hasHistoryItems = computed(() => {
 	return historyItems.value.length > 0
 })
 
+// 选择发布类型
 const selectType = (type) => {
 	formData.type = type
 }
 
+// 选择交易方式
 const selectTradeMethod = (method) => {
 	formData.tradeMethod = method
 	showHint.value = true
 }
 
+// 显示历史建议
 const showHistorySuggestions = () => {
 	if (hasHistoryItems.value && (formData.tradeMethod === 'exchange' || formData.tradeMethod === 'both')) {
 		showHint.value = true
 	}
 }
 
+// 切换历史列表显示
 const toggleHistoryList = () => {
 	showHistoryList.value = !showHistoryList.value
 }
 
+// 选择历史记录项
 const selectHistoryItem = (item) => {
 	if (typeof item === 'object') {
 		formData.exchangeItems = item.title
@@ -256,6 +271,7 @@ const selectHistoryItem = (item) => {
 	showHint.value = false
 }
 
+// 选择图片
 const chooseImage = () => {
 	uni.chooseImage({
 		count: 9 - formData.images.length,
@@ -267,12 +283,15 @@ const chooseImage = () => {
 	})
 }
 
+// 删除图片
 const deleteImage = (index) => {
 	formData.images.splice(index, 1)
 }
 
+// 表单验证
 const validateForm = () => {
-	if (!formData.title) {
+	// 验证标题
+	if (!formData.title || formData.title.trim() === '') {
 		uni.showToast({
 			title: '请输入标题',
 			icon: 'none'
@@ -280,7 +299,8 @@ const validateForm = () => {
 		return false
 	}
 
-	if (!formData.description) {
+	// 验证描述
+	if (!formData.description || formData.description.trim() === '') {
 		uni.showToast({
 			title: '请输入描述',
 			icon: 'none'
@@ -288,7 +308,8 @@ const validateForm = () => {
 		return false
 	}
 
-	if (formData.tradeMethod === 'money' && !formData.price) {
+	// 验证价格（当交易方式为金钱或均可时）
+	if (formData.tradeMethod === 'money' && (!formData.price || formData.price.trim() === '')) {
 		uni.showToast({
 			title: '请输入价格',
 			icon: 'none'
@@ -296,7 +317,8 @@ const validateForm = () => {
 		return false
 	}
 
-	if (formData.tradeMethod === 'exchange' && !formData.exchangeItems) {
+	// 验证交换物品（当交易方式为交换时）
+	if (formData.tradeMethod === 'exchange' && (!formData.exchangeItems || formData.exchangeItems.trim() === '')) {
 		uni.showToast({
 			title: '请输入可接受的交易物品',
 			icon: 'none'
@@ -304,7 +326,8 @@ const validateForm = () => {
 		return false
 	}
 
-	if (!formData.contact) {
+	// 验证联系方式
+	if (!formData.contact || formData.contact.trim() === '') {
 		uni.showToast({
 			title: '请输入联系方式',
 			icon: 'none'
@@ -315,30 +338,104 @@ const validateForm = () => {
 	return true
 }
 
-const handleSubmit = () => {
+// 清空表单
+const resetForm = () => {
+	formData.type = 'item'
+	formData.title = ''
+	formData.description = ''
+	formData.tradeMethod = 'money'
+	formData.price = ''
+	formData.exchangeItems = ''
+	formData.images = []
+	formData.contact = ''
+}
+
+// 提交表单
+const handleSubmit = async () => {
+	// 验证表单
 	if (!validateForm()) {
 		return
 	}
 
-	uni.showLoading({
-		title: '发布中...'
-	})
+	// 如果正在提交，直接返回
+	if (isSubmitting.value) {
+		return
+	}
 
-	setTimeout(() => {
-		uni.hideLoading()
-		uni.showToast({
-			title: '发布成功',
-			icon: 'success'
+	try {
+		// 设置提交状态
+		isSubmitting.value = true
+
+		// 显示加载提示
+		uni.showLoading({
+			title: '发布中...',
+			mask: true
 		})
 
-		setTimeout(() => {
-			uni.switchTab({
-				url: '/pages/index/index'
+		// 调用云函数发布物品
+		const res = await uniCloud.callFunction({
+			name: 'publish',
+			data: {
+				userId: 'U001', // TODO: 实际应该从登录信息获取
+				type: formData.type,
+				title: formData.title.trim(),
+				description: formData.description.trim(),
+				tradeMethod: formData.tradeMethod,
+				price: formData.price.trim(),
+				exchangeItems: formData.exchangeItems.trim(),
+				images: formData.images,
+				contact: formData.contact.trim()
+			}
+		})
+
+		// 隐藏加载提示
+		uni.hideLoading()
+
+		// 处理返回结果
+		if (res.result.code === 200) {
+			// 发布成功
+			uni.showToast({
+				title: '发布成功',
+				icon: 'success',
+				duration: 1500
 			})
-		}, 1500)
-	}, 1000)
+
+			// 清空表单
+			resetForm()
+
+			// 1.5秒后返回首页
+			setTimeout(() => {
+				uni.switchTab({
+					url: '/pages/index/index'
+				})
+			}, 1500)
+		} else {
+			// 发布失败，显示错误信息
+			uni.showToast({
+				title: res.result.message || '发布失败',
+				icon: 'none',
+				duration: 2000
+			})
+		}
+	} catch (error) {
+		// 隐藏加载提示
+		uni.hideLoading()
+		
+		console.error('发布失败:', error)
+		
+		// 显示错误提示
+		uni.showToast({
+			title: '网络错误，请稍后重试',
+			icon: 'none',
+			duration: 2000
+		})
+	} finally {
+		// 取消提交状态
+		isSubmitting.value = false
+	}
 }
 
+// 页面加载时获取历史记录
 onMounted(() => {
 	const savedHistory = uni.getStorageSync('publishHistory')
 	if (savedHistory) {
@@ -605,5 +702,9 @@ onMounted(() => {
 	justify-content: center;
 	margin-top: 20rpx;
 	border: none;
+}
+
+.submit-btn[disabled] {
+	opacity: 0.6;
 }
 </style>
