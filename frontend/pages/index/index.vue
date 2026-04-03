@@ -212,11 +212,41 @@ export default {
           mask: true
         })
 
-        // 调用云函数进行匹配
+        // 1. 获取用户的第一个发布物品
+        const userPostsRes = await uniCloud.callFunction({
+          name: 'posts',
+          data: {
+            userId: userId,
+            page: 1,
+            pageSize: 10,
+            type: 'all',
+            keyword: ''
+          }
+        })
+
+        let userPosts = []
+        if (userPostsRes.result.code === 200) {
+          userPosts = userPostsRes.result.data.list
+        }
+
+        if (!userPosts || userPosts.length === 0) {
+          uni.hideLoading()
+          uni.showToast({
+            title: '请先发布物品',
+            icon: 'none'
+          })
+          return
+        }
+
+        // 获取第一个发布的物品ID
+        const firstPostId = userPosts[0].postId
+
+        // 2. 调用匹配API
         const res = await uniCloud.callFunction({
           name: 'match',
           data: {
-            userId: userId
+            userId: userId,
+            postId: firstPostId
           }
         })
 
@@ -225,11 +255,10 @@ export default {
         if (res.result.code === 200) {
           const proposals = res.result.data.proposals
           if (proposals && proposals.length > 0) {
-            uni.showToast({
-              title: '匹配成功！',
-              icon: 'success'
+            // 3. 跳转到匹配结果页面
+            uni.navigateTo({
+              url: `/pages/match/result?cycleId=${proposals[0].matchId}&matches=${encodeURIComponent(JSON.stringify(proposals))}`
             })
-            // TODO: 跳转到匹配结果页面
           } else {
             uni.showToast({
               title: '暂无匹配结果',

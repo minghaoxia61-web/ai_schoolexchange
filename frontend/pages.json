@@ -41,6 +41,12 @@
 				"navigationBarTitleText": "注册",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/match/result",
+			"style": {
+				"navigationBarTitleText": "匹配结果"
+			}
 		}
 	],
 	"globalStyle": {
