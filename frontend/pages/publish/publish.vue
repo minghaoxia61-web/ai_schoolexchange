@@ -350,6 +350,22 @@ const resetForm = () => {
 	formData.contact = ''
 }
 
+// 发布成功后
+async function publishSuccess() {
+  uni.showToast({
+    title: '发布成功',
+    icon: 'success'
+  });
+  
+  // 延迟 1.5 秒后返回首页
+  setTimeout(() => {
+    // 使用 reLaunch 而不是 navigateTo，这样会重新加载首页
+    uni.reLaunch({
+      url: '/pages/index/index'
+    });
+  }, 1500);
+}
+
 // 提交表单
 const handleSubmit = async () => {
 	// 验证表单
@@ -394,21 +410,10 @@ const handleSubmit = async () => {
 		// 处理返回结果
 		if (res.result.code === 200) {
 			// 发布成功
-			uni.showToast({
-				title: '发布成功',
-				icon: 'success',
-				duration: 1500
-			})
+			await publishSuccess()
 
 			// 清空表单
 			resetForm()
-
-			// 1.5秒后返回首页
-			setTimeout(() => {
-				uni.switchTab({
-					url: '/pages/index/index'
-				})
-			}, 1500)
 		} else {
 			// 发布失败，显示错误信息
 			uni.showToast({
