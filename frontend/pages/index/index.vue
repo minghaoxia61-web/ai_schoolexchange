@@ -253,11 +253,11 @@ export default {
         uni.hideLoading()
 
         if (res.result.code === 200) {
-          const proposals = res.result.data.proposals
-          if (proposals && proposals.length > 0) {
+          const matches = res.result.data.matches
+          if (matches && matches.length > 0) {
             // 3. 跳转到匹配结果页面
             uni.navigateTo({
-              url: `/pages/match/result?cycleId=${proposals[0].matchId}&matches=${encodeURIComponent(JSON.stringify(proposals))}`
+              url: `/pages/match/result?cycleId=${matches[0].matchId}&matches=${encodeURIComponent(JSON.stringify(matches))}`
             })
           } else {
             uni.showToast({

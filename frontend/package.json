@@ -1,0 +1,24 @@
+{
+  "name": "campus-trade",
+  "version": "1.0.0",
+  "description": "校园物品交换平台",
+  "main": "main.js",
+  "scripts": {
+    "dev:mp-weixin": "uni-app-cli dev --platform mp-weixin",
+    "build:mp-weixin": "uni-app-cli build --platform mp-weixin"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "^3.0.0"
+  },
+  "devDependencies": {
+    "@dcloudio/uni-cli-service": "^3.0.0"
+  },
+  "keywords": [
+    "uni-app",
+    "wechat",
+    "campus",
+    "trade"
+  ],
+  "author": "",
+  "license": "MIT"
+}
