@@ -631,7 +631,8 @@ function findMatchCycles(data, threshold = 0.5) {
 		? scarcityScores.reduce((a, b) => a + b.scarcity, 0) / scarcityScores.length 
 		: 0;
 
-	const cycleOverlapAnalysis = analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails);
+	const cycleOverlapAnalysis = analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails, data);
+
 
 	cycles.sort((a, b) => {
 		const aScore = a.probability * 0.6 + a.scarcityWeight * 0.4;
@@ -663,7 +664,8 @@ function findMatchCycles(data, threshold = 0.5) {
 	};
 }
 
-function analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails) {
+function analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails, data) {
+
 	const analysis = {
 		multiCycleUsers: [],
 		hotUsers: [],
@@ -673,10 +675,11 @@ function analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails) {
 
 	for (const [userId, cycleCount] of userCycleCount.entries()) {
 		if (cycleCount >= 2) {
-			const user = mockData.find(u => u.userId === userId);
+			const user = data.find(u => u.userId === userId);
 			const userCycles = userCycleDetails.get(userId);
 			
-			const roleAnalysis = analyzeUserRole(userId, userCycles);
+			const roleAnalysis = analyzeUserRole(userId, userCycles, data);
+
 			analysis.userRoleAnalysis.set(userId, roleAnalysis);
 
 			const multiCycleUser = {
@@ -726,13 +729,16 @@ function analyzeCycleOverlap(cycles, userCycleCount, userCycleDetails) {
 	return analysis;
 }
 
-function analyzeUserRole(userId, userCycles) {
-	const roleCounts = { provider: 0, consumer: 0, bridge: 0 };
-	
-	for (const cycle of userCycles) {
-		const user = mockData.find(u => u.userId === userId);
-		const offerTags = user.offerTags.map(t => t.tag);
-		const wantTags = user.wantTags.map(t => t.tag);
+function analyzeUserRole(userId, userCycles, data) {
+  const roleCounts = { provider: 0, consumer: 0, bridge: 0 };
+  
+  for (const cycle of userCycles) {
+    const user = data.find(u => u.userId === userId);
+    if (!user) continue;  // ← 添加安全检查
+    
+    const offerTags = user.offerTags || [];
+    const wantTags = user.wantTags || [];
+
 		
 		const isProvider = cycle.tags.some(tag => offerTags.includes(tag));
 		const isConsumer = cycle.tags.some(tag => wantTags.includes(tag));
@@ -780,11 +786,4 @@ function calculateProbabilityDistribution(cycles) {
 	return distribution;
 }
 
-// 导出函数
-module.exports = {
-	findMatchCycles,
-	calculateSupplyDemand,
-	calculateAttributeSimilarity,
-	calculateTextSimilarity
-};
-module.exports = { findMatchCycles }
+module.exports = { findMatchCycles };

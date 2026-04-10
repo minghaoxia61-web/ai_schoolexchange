@@ -387,12 +387,12 @@ const handleSubmit = async () => {
 			title: '发布中...',
 			mask: true
 		})
-
+        console.log('当前 userId:', uni.getStorageSync('userId'))
 		// 调用云函数发布物品
 		const res = await uniCloud.callFunction({
 			name: 'publish',
 			data: {
-				userId: 'U001', // TODO: 实际应该从登录信息获取
+                userId: uni.getStorageSync('userId') || 'U001',
 				type: formData.type,
 				title: formData.title.trim(),
 				description: formData.description.trim(),

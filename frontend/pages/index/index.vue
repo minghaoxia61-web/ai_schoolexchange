@@ -221,7 +221,8 @@ export default {
             pageSize: 10,
             type: 'all',
             keyword: ''
-          }
+          },
+          timeout: 20000
         })
 
         let userPosts = []
@@ -247,7 +248,9 @@ export default {
           data: {
             userId: userId,
             postId: firstPostId
-          }
+          },
+          // 默认超时偏短，匹配云函数可能涉及外部 API 调用
+          timeout: 60000
         })
 
         uni.hideLoading()
@@ -275,7 +278,7 @@ export default {
         uni.hideLoading()
         console.error('匹配失败:', error)
         uni.showToast({
-          title: '网络错误，请稍后重试',
+          title: error?.message || error?.errMsg || '网络错误，请稍后重试',
           icon: 'none'
         })
       }

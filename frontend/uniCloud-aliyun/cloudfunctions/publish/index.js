@@ -93,11 +93,16 @@ exports.main = async (event, context) => {
     await db.collection('posts').add(postData)
 
     // 返回成功结果
-    return {
+    // 7. 返回结果
+    const result = {
       code: 200,
       message: 'success',
       data: { postId }
     }
+    
+    console.log('发布成功，返回结果:', JSON.stringify(result))
+    return result
+
   } catch (error) {
     console.error('发布物品失败:', error)
     return {

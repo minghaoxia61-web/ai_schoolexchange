@@ -141,60 +141,39 @@ export default {
     },
 
     // 接受匹配
-    async acceptMatch(match) {
-      await this.handleMatchResponse(match, 'accept')
-    },
-
-    // 拒绝匹配
-    async rejectMatch(match) {
-      await this.handleMatchResponse(match, 'reject')
-    },
-
-    // 处理匹配响应
-    async handleMatchResponse(match, action) {
-      try {
-        uni.showLoading({
-          title: '处理中...',
-          mask: true
-        })
-
-        // 调用响应 API
-        const res = await uniCloud.callFunction({
-          name: 'respond',
-          data: {
-            userId: uni.getStorageSync('userId'),
-            matchId: match.matchId || this.cycleId,
-            action: action
-          }
-        })
-
-        uni.hideLoading()
-
-        if (res.result.code === 200) {
-          uni.showToast({
-            title: action === 'accept' ? '匹配已接受' : '匹配已拒绝',
-            icon: 'success'
-          })
-          
-          // 延迟后返回首页
+    acceptMatch(match) {
+      uni.showModal({
+        title: '匹配成功！',
+        content: `请联系对方：${match.contact || '暂无联系方式'}`,
+        showCancel: false,
+        success: () => {
           setTimeout(() => {
             uni.switchTab({
               url: '/pages/index/index'
             })
-          }, 1500)
-        } else {
-          uni.showToast({
-            title: res.result.message || '操作失败',
-            icon: 'none'
-          })
+          }, 500)
         }
-      } catch (error) {
-        uni.hideLoading()
-        console.error('处理匹配响应失败:', error)
-        uni.showToast({
-          title: '网络错误，请稍后重试',
-          icon: 'none'
-        })
+      })
+    },
+
+    // 拒绝匹配
+    rejectMatch(match) {
+      uni.showToast({
+        title: '已拒绝',
+        icon: 'success'
+      })
+      // 从列表中移除
+      const index = this.matches.indexOf(match)
+      if (index > -1) {
+        this.matches.splice(index, 1)
+      }
+      // 如果没有匹配结果了，返回首页
+      if (this.matches.length === 0) {
+        setTimeout(() => {
+          uni.switchTab({
+            url: '/pages/index/index'
+          })
+        }, 1000)
       }
     }
   }

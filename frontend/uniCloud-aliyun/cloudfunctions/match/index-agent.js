@@ -1,6 +1,5 @@
 // 匹配算法云函数 - 使用 Agent 进行智能匹配
 const db = uniCloud.database()
-const https = require('https')
 
 /**
  * 生成唯一的 matchId
@@ -13,88 +12,14 @@ function generateMatchId() {
 }
 
 /**
- * 使用 Node.js 原生 https 调用百炼智能体应用 API（原生调用方式）
- * @param {string} prompt 提示词
- * @param {string} apiKey API Key
- * @param {string} appId 应用 ID
- * @returns {Promise<string>} AI 返回的文本
- */
-function callAgentAPI(prompt, apiKey, appId) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({
-      input: {
-        prompt: prompt
-      },
-      parameters: {}
-    })
-
-    const options = {
-      hostname: 'dashscope.aliyuncs.com',
-      port: 443,
-      path: `/api/v1/apps/${appId}/completion`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': data.length
-      }
-    }
-
-    console.log('开始调用百炼智能体应用 API（原生调用方式）...')
-    console.log('应用 ID:', appId)
-    console.log('请求数据:', data)
-
-    const req = https.request(options, (res) => {
-      let responseBody = ''
-
-      res.on('data', (chunk) => {
-        responseBody += chunk
-      })
-
-      res.on('end', () => {
-        console.log('百炼智能体应用 API 响应状态:', res.statusCode)
-        console.log('百炼智能体应用 API 响应:', responseBody)
-        
-        if (res.statusCode === 200) {
-          try {
-            const result = JSON.parse(responseBody)
-            if (result.output && result.output.text) {
-              resolve(result.output.text)
-            } else {
-              resolve(responseBody)
-            }
-          } catch (e) {
-            resolve(responseBody)
-          }
-        } else {
-          reject(new Error(`API 返回状态码: ${res.statusCode}`))
-        }
-      })
-    })
-
-    req.on('error', (error) => {
-      console.error('百炼智能体应用 API 调用失败:', error)
-      reject(error)
-    })
-
-    req.write(data)
-    req.end()
-  })
-}
-
-/**
- * 调用百炼 Agent API 进行智能匹配
+ * 调用通义千问 API 进行智能匹配
  * @param {Object} userPost 当前用户的物品
  * @param {Array} allPosts 所有其他用户的物品
  * @returns {Promise<Array>} 匹配结果数组
  */
 async function callAgentMatching(userPost, allPosts) {
-  console.log('=== 开始 AI 匹配 ===')
-  console.log('用户物品:', userPost)
-  console.log('其他物品数量:', allPosts.length)
-  
   try {
-    // 构建 API 提示 - 按照官方示例格式
+    // 构建 API 提示
     const prompt = `用户发布的物品：
 - 标题：${userPost.title}
 - 描述：${userPost.description || '无'}
@@ -116,39 +41,44 @@ ${index + 1}. ${post.title}
 
 请按匹配分数从高到低排序，只返回 JSON 格式。`
 
-    console.log('提示词构建完成，准备调用 API...')
-
-    // 你的 API Key 和应用 ID
+    // 你的 API Key
     const apiKey = 'sk-619e79f8ade74f40b8ed7f427b95aece'
-    const appId = 'e18f491c8e69493999dd14e8a9737d23'
 
-    console.log('开始调用百炼 Agent API...')
-    
-    // 调用百炼 Agent API
-    const aiText = await callAgentAPI(prompt, apiKey, appId)
+    // 调用通义千问 API
+    const response = await uniCloud.httpclient.request({
+      method: 'POST',
+      url: 'https://dashscope.aliyuncs.com/api/v1/apps/e18f491c8e69493999dd14e8a9737d23/completion',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      data: {
+        input: {
+          prompt: prompt
+        },
+        parameters: {}
+      },
+      dataType: 'json',
+      timeout: 30000
+    })
 
-    console.log('百炼 Agent API 调用完成')
-    console.log('AI 返回文本:', aiText)
+    // 解析 API 响应
+    if (response.status === 200 && response.data && response.data.output) {
+      const aiText = response.data.output.text
       
-    // 提取 JSON 数组
-    const jsonMatch = aiText.match(/\[[\s\S]*\]/)
-    if (jsonMatch) {
-      console.log('找到 JSON 匹配结果')
-      const matches = JSON.parse(jsonMatch[0])
-      console.log('解析后的匹配结果:', matches)
-      return matches
-    } else {
-      console.log('未找到 JSON 格式，使用降级方案')
+      // 提取 JSON 数组
+      const jsonMatch = aiText.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        const matches = JSON.parse(jsonMatch[0])
+        return matches
+      }
     }
 
     // 如果 API 返回格式不对，使用降级方案
     return simpleMatching(userPost, allPosts)
   } catch (error) {
-    console.error('百炼 Agent API 调用失败:', error)
-    console.error('错误详情:', error.message)
-    console.error('错误堆栈:', error.stack)
+    console.error('通义千问 API 调用失败:', error)
     // API 失败时使用降级方案
-    console.log('使用简单算法作为降级方案')
     return simpleMatching(userPost, allPosts)
   }
 }
@@ -160,69 +90,53 @@ ${index + 1}. ${post.title}
  * @returns {Array} 匹配结果数组
  */
 function simpleMatching(userPost, allPosts) {
-  console.log('简单算法开始匹配...')
-  console.log('用户物品:', userPost)
-  console.log('其他物品数量:', allPosts.length)
-  
   const matches = []
 
   for (const post of allPosts) {
     let score = 0
     const reasons = []
 
-    console.log('正在匹配物品:', post.title)
-
     // 类型匹配（权重 30%）
     if (post.type === userPost.type) {
       score += 0.3
       reasons.push('类型相同')
-      console.log('  +0.3 类型相同')
     } else {
       score += 0.2
       reasons.push('类型互补')
-      console.log('  +0.2 类型互补')
     }
 
     // 交易方式匹配（权重 25%）
     if (post.tradeMethod === userPost.tradeMethod) {
       score += 0.25
       reasons.push('交易方式匹配')
-      console.log('  +0.25 交易方式匹配')
     } else if (post.tradeMethod === 'both' || userPost.tradeMethod === 'both') {
       score += 0.2
       reasons.push('交易方式兼容')
-      console.log('  +0.2 交易方式兼容')
     } else if (post.tradeMethod === 'both' && userPost.tradeMethod === 'both') {
       score += 0.25
       reasons.push('交易方式完全兼容')
-      console.log('  +0.25 交易方式完全兼容')
     }
 
     // 需求匹配（权重 25%）
-    if (userPost.exchangeItems && userPost.exchangeItems.trim()) {
+    if (userPost.exchangeItems) {
       const exchangeItems = userPost.exchangeItems.split(/[\s,，、]+/)
-      console.log('  用户想要交换:', exchangeItems)
       for (const item of exchangeItems) {
-        if (item && post.title && post.title.includes(item)) {
+        if (item && post.title.includes(item)) {
           score += 0.25
           reasons.push(`需求匹配：${item}`)
-          console.log('  +0.25 需求匹配:', item)
           break
         }
       }
     }
 
     // 标题关键词匹配（权重 10%）
-    if (userPost.title && post.title) {
-      const userKeywords = userPost.title.split(/[\s,，、]+/)
-      const postKeywords = post.title.split(/[\s,，、]+/)
-      const commonKeywords = userKeywords.filter(k => postKeywords.includes(k))
+    const userKeywords = userPost.title.split(/[\s,，、]+/)
+    const postKeywords = post.title.split(/[\s,，、]+/)
+    const commonKeywords = userKeywords.filter(k => postKeywords.includes(k))
+    if (commonKeywords.length > 0) {
+      score += 0.1 * (commonKeywords.length / userKeywords.length)
       if (commonKeywords.length > 0) {
-        score += 0.1 * (commonKeywords.length / userKeywords.length)
-        console.log('  +0.1 关键词匹配:', commonKeywords)
-        if (commonKeywords.length > 0) {
-          reasons.push(`关键词匹配: ${commonKeywords.join(', ')}`)
-        }
+        reasons.push(`关键词匹配: ${commonKeywords.join(', ')}`)
       }
     }
 
@@ -231,7 +145,6 @@ function simpleMatching(userPost, allPosts) {
       const descSimilarity = calculateTextSimilarity(userPost.description, post.description)
       score += 0.1 * descSimilarity
       if (descSimilarity > 0.5) {
-        console.log('  +0.1 描述相似')
         reasons.push('描述相似')
       }
     }
@@ -239,22 +152,14 @@ function simpleMatching(userPost, allPosts) {
     // 确保分数在 0-1 之间
     score = Math.min(Math.max(score, 0), 1)
 
-    console.log('  最终分数:', score)
-
-    // 降低匹配阈值，让更多物品能被匹配
-    if (score > 0.15) {
-      console.log('  ✓ 添加到匹配结果')
+    if (score > 0.3) {
       matches.push({
-        ...post, // 返回完整的物品信息
+        postId: post.postId,
         matchScore: score,
         matchReason: reasons.slice(0, 3).join('；') || '基本匹配'
       })
-    } else {
-      console.log('  ✗ 分数太低，不匹配')
     }
   }
-
-  console.log('简单算法匹配完成，找到:', matches.length, '个结果')
 
   // 按分数排序
   matches.sort((a, b) => b.matchScore - a.matchScore)
@@ -269,8 +174,6 @@ function simpleMatching(userPost, allPosts) {
  * @returns {number} 相似度 0-1
  */
 function calculateTextSimilarity(text1, text2) {
-  if (!text1 || !text2) return 0
-  
   const words1 = text1.split(/[\s,，、。.！!？?]+/).filter(w => w.length > 0)
   const words2 = text2.split(/[\s,，、。.！!？?]+/).filter(w => w.length > 0)
 
@@ -286,38 +189,31 @@ function calculateTextSimilarity(text1, text2) {
 }
 
 exports.main = async (event, context) => {
-  console.log('=== 匹配云函数启动 ===')
-  console.log('请求参数:', event)
-  
   try {
     const params = event.body || event
     const { userId, postId } = params
 
     if (!userId) {
-      console.log('缺少 userId 参数')
       return {
         code: 400,
         message: '缺少必要字段: userId'
       }
     }
 
-    console.log('用户ID:', userId)
-    console.log('物品ID:', postId)
-
     // 1. 获取当前用户的物品
     let userPost = null
-    console.log('获取用户的第一个物品，忽略 postId...')
-    const userPostsResult = await db.collection('posts')
-      .where({ userId, status: 'active' })
-      .limit(1)
-      .get()
-    console.log('userPostsResult:', userPostsResult)
-    userPost = userPostsResult.data[0]
-
-    console.log('用户物品:', userPost)
+    if (postId) {
+      const userPostResult = await db.collection('posts').doc(postId).get()
+      userPost = userPostResult.data
+    } else {
+      const userPostsResult = await db.collection('posts')
+        .where({ userId, status: 'active' })
+        .limit(1)
+        .get()
+      userPost = userPostsResult.data[0]
+    }
 
     if (!userPost) {
-      console.log('用户没有发布物品')
       return {
         code: 200,
         message: 'success',
@@ -329,20 +225,17 @@ exports.main = async (event, context) => {
     }
 
     // 2. 获取所有其他用户的活跃物品
-    console.log('获取其他用户的物品...')
     const allPostsResult = await db.collection('posts')
       .where({
         userId: db.command.neq(userId),
         status: 'active'
       })
-      .limit(20) // 限制数量，避免数据量大导致超时
+      .limit(50) // 限制数量
       .get()
 
     const allPosts = allPostsResult.data
-    console.log('其他用户物品数量:', allPosts.length)
 
     if (allPosts.length === 0) {
-      console.log('没有其他用户发布的物品')
       return {
         code: 200,
         message: 'success',
@@ -353,25 +246,21 @@ exports.main = async (event, context) => {
       }
     }
 
-    // 3. 先尝试调用 AI 匹配
+    // 3. 调用 Agent 匹配
     let matches = []
     let useAgent = false
 
     try {
-      console.log('开始调用 AI 匹配...')
+      // 尝试调用 Agent
       matches = await callAgentMatching(userPost, allPosts)
       useAgent = true
-      console.log('AI 匹配完成，结果数量:', matches.length)
     } catch (agentError) {
-      console.error('AI 匹配失败，使用降级方案:', agentError)
+      console.error('Agent 匹配失败，使用降级方案:', agentError)
     }
 
-    // 4. 如果 AI 失败，使用简单算法
+    // 4. 如果 Agent 失败，使用简单算法
     if (matches.length === 0) {
-      console.log('使用简单算法匹配...')
       matches = simpleMatching(userPost, allPosts)
-      useAgent = false
-      console.log('简单算法匹配完成，结果数量:', matches.length)
     }
 
     // 5. 补充匹配结果的详细信息
@@ -397,9 +286,6 @@ exports.main = async (event, context) => {
         })
       }
     }
-
-    console.log('最终匹配结果数量:', matchesWithDetails.length)
-    console.log('是否使用 AI:', useAgent)
 
     // 6. 返回结果
     return {

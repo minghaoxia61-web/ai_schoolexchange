@@ -119,9 +119,11 @@ export default {
 					// 登录成功，保存用户信息到本地存储
 					
 					// 保存 userId
-					if (res.result.uid) {
-						uni.setStorageSync('userId', res.result.uid)
-					}
+					// 保存 userId - 优先使用 uid，其次 username，最后 phone
+					const userId = res.result.uid || res.result.username || this.phone
+					uni.setStorageSync('userId', userId)
+					console.log('保存的 userId:', userId)
+
 					
 					// 保存完整的用户信息
 					const userInfo = {
